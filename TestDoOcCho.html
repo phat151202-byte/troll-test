@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Test Óc Chó — Quiz Troll</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#ff5d8f; --muted:#9aa4b2;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  body{background:linear-gradient(180deg,#061226,#0f1724);display:flex;align-items:center;justify-content:center;padding:12px;color:#e6eef8}
+  .app{width:100%;max-width:520px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ff9a66);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+  h1{margin:0;font-size:18px}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+  .card{background:linear-gradient(180deg,var(--card),#071028);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+  .progress{height:8px;background:#071725;border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ffb86b);width:0%}
+  .question{font-size:16px;margin-bottom:10px}
+  .choices{display:flex;flex-direction:column;gap:8px}
+  .choice{background:#081829;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:transform .08s}
+  .choice:active{transform:scale(.99)}
+  .muted{color:var(--muted);font-size:13px;margin-top:8px}
+  .footer{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px}
+  .btn{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+  .small{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 10px;border-radius:8px}
+  #resultCard{display:none;text-align:center}
+  .bigScore{font-size:44px;font-weight:900;color:#fff;margin:8px 0}
+  .roast{font-size:16px;color:#ffd6e1;margin-top:8px}
+  .confetti{pointer-events:none;position:fixed;left:0;top:0;width:100%;height:100%;z-index:9999}
+  footer{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}
+  @keyframes wiggle{0%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}100%{transform:rotate(-5deg)}}
+  .logo.angry{animation:wiggle .6s ease-in-out}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">🤪</div>
+    <div>
+      <h1>Test Óc Chó — Quiz Troll</h1>
+      <p class="lead">10 câu bẫy — trả lời đường nào cũng “óc chó” — dành cho team lầy 😂</p>
+    </div>
+  </header>
+
+  <div class="card" id="quizCard">
+    <div class="progress"><i id="bar"></i></div>
+    <div id="qbox">
+      <div class="question" id="qtext">Đang tải câu hỏi...</div>
+      <div class="choices" id="choices"></div>
+      <div class="muted">Chỉ cần chọn 1 đáp án — trả lời thật hoặc troll đều được.</div>
+    </div>
+
+    <div id="resultCard" class="card" style="margin-top:12px;">
+      <div id="resultTop">
+        <div style="font-size:16px;font-weight:800">KẾT QUẢ</div>
+        <div class="bigScore" id="scoreText">100% ÓC CHÓ</div>
+        <div class="roast" id="roastText">Bạn xứng danh... óc chó chính hiệu 🐶💥</div>
+        <div style="margin-top:12px">
+          <button class="btn" id="shareBtn">Lưu & Chia sẻ để troll bạn bè</button>
+          <button class="small" id="retryBtn">Làm lại (10 câu mới)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="muted" id="qcount">Câu 0 / 10</div>
+      <div>
+        <button class="small" id="skipBtn">Bỏ qua (troll tiếp)</button>
+        <button class="btn" id="startBtn">Bắt đầu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="muted" style="margin-top:8px">Lưu ý: quiz này chỉ mang tính giải trí, troll nhẹ — không thật nghiêm trọng nha!</div>
+  <footer>Made with ❤️ — Đừng giận, chỉ cười thôi 😜</footer>
+</div>
+
+<canvas id="confetti" class="confetti"></canvas>
+<audio id="pop" preload="auto"><source src="https://assets.mixkit.co/sfx/preview/mixkit-fairy-chimes-807.wav" type="audio/wav"></audio>
+
+<script>
+/* ========== Bank câu hỏi (đa dạng, lầy, trap) ========== 
+   Mỗi câu có text và 4 đáp án (chuẩn) — nhưng note: mọi đáp án đều dẫn đến troll.
+*/
+const questionBank = [
+  {q:"Bạn đi chợ, thấy 1kg táo ghi 'MUA 1 TẶNG 1', bạn sẽ:", a:["Mua 2kg luôn", "Đợi đến khi hết khuyến mãi", "Hỏi người bán có chắc không", "Mua 1 ăn 1 ngay trên chỗ"], tip:"Cẩn thận, táo có thể là hành!"},
+
+  {q:"Khi ai đó nhắn 'Đang rảnh k?', bạn trả lời thế nào cho lịch sự?", a:["Rảnh chứ, muốn gì?", "Không rảnh nhưng nhắn lại luôn", "Gửi sticker cute", "Gọi video cho hoành tráng"], tip:"Chọn kiểu nào cũng dễ dính bẫy lắm nha."},
+
+  {q:"Nếu điện thoại rơi xuống nước, việc đầu tiên bạn làm là:", a:["Bật chế độ máy bay", "Đập điện thoại cho khô", "Bỏ vào gạo 24 giờ", "Cầu nguyện"], tip:"Phương pháp khoa học? Gạo chỉ cho cảm giác thôi."},
+
+  {q:"Bạn đang mua cơm, người bán bảo 'Hôm nay thêm 1 miếng thịt miễn phí', bạn:", a:["Cười nhận ngay", "Kiểm tra xem thịt là thịt gì", "Hỏi vì sao miễn phí", "Không tin, bỏ đi"], tip:"Miễn phí là art — ăn đi đừng hỏi! "},
+
+  {q:"Khi nhìn đồng hồ thấy 13:13, bạn tin đó là dấu hiệu may mắn không?", a:["Tất nhiên! 13:13 may mắn", "Không, 13 việc gì may", "Chụp hình đăng story", "Thổi 13 lần để chắc chắn"], tip:"Số đẹp hay xấu là do bạn nghĩ."},
+
+  {q:"Bạn được tặng 1 cây kẹo, thở phào vì đói. Bạn làm gì?", a:["Ăn liền", "Kiểm tra hạn sử dụng", "Chia 1 nửa cho bạn", "Giữ lại làm kỷ niệm"], tip:"Ăn liền là bản năng sống sót."},
+
+  {q:"Bạn thấy 1 thông báo 'Bạn trúng thưởng iPhone', trước khi click bạn:", a:["Nhảy lên vì vui", "Kiểm tra link có 'http' hay không", "Gọi bạn bè hỏi có thật không", "Nhờ mẹ kiểm tra"], tip:"Link lừa đảo chuyên nghiệp đấy nhé."},
+
+  {q:"Bạn đang đường, thấy 1 chú chó dễ thương. Bạn phản ứng?", a:["Chạy lại ôm ngay", "Nhìn từ xa và hỏi chủ", "Quay clip đăng TikTok", "Cho nó ăn xúc xích"], tip:"Chó dễ thương, óc chó dễ bị tan chảy."},
+
+  {q:"Sáng nay bạn quên mang ví, nhưng vẫn 'tự tin' đi mua trà sữa. Bạn:", a:["Dùng app chuyển tiền luôn", "Chạy về lấy ví", "Năn nỉ tụi bạn trả hộ", "Ôm cốc mà đi về"], tip:"Trà sữa có thể chờ, nhưng lòng tự trọng thì sao?"},
+
+  {q:"Bạn rủ crush đi ăn, crush trả lời 'Ok' nhưng không bao giờ đi. Bạn:", a:["Gửi 100 tin nhắn", "Chịu thua và quên đi", "Đổi crush khác", "Tổ chức sự kiện 'đợi crush'"], tip:"Đợi crush là thử thách siêu nhân."},
+
+  {q:"Bạn xem 1 mẹo 'thấy 1 đống tiền trên đường thì làm sao?', bạn:", a:["Nhặt bỏ túi", "Đưa cho công an", "Check có camera không", "Để lại và ngó lơ"], tip:"Tiền rơi là cám dỗ level pro."},
+
+  {q:"Bạn học online, thầy hỏi 'Ai làm bài?', bạn:", a:["Giơ tay thật cao", "Im lặng vì sợ sai", "Viết đáp án copy paste", "Bật micro ca 1 bài"], tip:"Học cũng cần phong cách!"},
+
+  {q:"Bạn thấy meme 'ăn mì tôm pha nước trà', bạn thử ngay chứ?", a:["Thử luôn", "Không, coi lại recipe", "Chỉ like thôi", "Gửi cho hội bạn thử"], tip:"Mì + trà = tình bạn bền vững?"},
+
+  {q:"Bạn mua vé xem phim, đến rạp mới nhớ quên kính 3D. Bạn:", a:["Đeo kính rỗng tự chế", "Xem phim 2D vẫn ổn", "Đòi tiền lại", "Chụp hình check-in cho oai"], tip:"Oai hay không oai, là do bạn."},
+
+  {q:"Bạn thấy 'bí kíp ngủ 5 phút là tỉnh táo cả ngày', bạn làm thử chứ?", a:["Làm thử liền", "Nghi ngờ rồi thôi", "Xem review trên YouTube", "Viết 1 bài praise"], tip:"Giấc ngủ quý hơn vàng."},
+
+  {q:"Bạn được mời làm 'đa nhiệm siêu nhân' trong 1 ngày, bạn:", a:["Chấp nhận và ngủ 0 tiếng", "Từ chối vì sợ kiệt sức", "Lên plan chi tiết từng phút", "Nhờ AI làm hộ"], tip:"Đa nhiệm: tin hay không thì tùy bạn."},
+
+  {q:"Crush nhắn 'có chuyện nói', bạn reply ngay sao cho cute?", a:["'Mau kể đi, bé đây nghe nè'", "'Gì gì nói mau'", "'Có chuyện gì hốt lẹ'", "'Sẵn sàng 24/7'"], tip:"Cute level quyết định outcome."},
+
+  {q:"Bạn thấy 'cây 5 lá tiết lộ tính cách', bạn nhìn cây hoa trước nhà và:", a:["Đếm lá ngay", "Chụp up story", "Ươm 1 cây khác", "Ngồi thiền cạnh nó"], tip:"Tính cách hay cây cảnh mới là câu hỏi."},
+
+  {q:"Bạn lỡ reply tin nhắn 'ok' thay vì 'okeee', bạn:", a:["Xóa rồi gửi lại 'okeee'", "Để yên vì đã lỡ", "Gửi sticker bù đắp", "Giải thích 1 đoạn dài"], tip:"Cách reply quyết định level lầy."},
+
+  {q:"Bạn đang đói, thấy bánh mì dở, bạn:", a:["Ăn cho hết", "Nói 'thôi đừng phí'", "Chia cho bạn", "Cất vào tủ"], tip:"Bữa ăn = quyết định đạo đức nhỏ."},
+
+  {q:"Bạn thấy 1 challenge 'nhảy 10 cái trong 10s', bạn:", a:["Quẩy luôn", "Xem 1 clip trước", "Nói 'đợi tí' rồi chơi", "Gọi team support"], tip:"Thử thách hoặc tẩu thoát."},
+
+  {q:"Bạn đi siêu thị, thấy 1 nút 'bấm để thử quà', bạn:", a:["Bấm luôn", "Xem xung quanh trước", "Chỉ bấm nếu không ai nhìn", "Quên luôn"], tip:"Cám dỗ mọi nơi mọi lúc."},
+
+  {q:"Bạn muốn tỏ tình, cách lầy nhất là:", a:["Gửi 100 dòng thơ auto", "Tỏ tình bằng meme", "Nấu 1 món dở rồi tặng", "Nhảy flashmob trước cửa"], tip:"Tỏ tình = nghệ thuật và may rủi."},
+
+  {q:"Bạn làm mất chìa khóa phòng, bước tiếp theo:", a:["Tìm mọi ngóc ngách", "Gọi thợ khóa ngay", "Bóc 1 gói snack để bớt khó chịu", "Ngồi khóc 10 phút rồi tìm"], tip:"Tâm trạng ảnh hưởng giải pháp."}
+];
+
+/* ========== App logic ========== */
+const TOTAL = 10;
+let questions = [];
+let idx = 0;
+let answers = [];
+const bar = document.getElementById('bar');
+const qtext = document.getElementById('qtext');
+const choicesEl = document.getElementById('choices');
+const qcount = document.getElementById('qcount');
+const startBtn = document.getElementById('startBtn');
+const skipBtn = document.getElementById('skipBtn');
+const logo = document.querySelector('.logo');
+const pop = document.getElementById('pop');
+const confettiCanvas = document.getElementById('confetti');
+confettiCanvas.width = innerWidth; confettiCanvas.height = innerHeight;
+
+/* pick random unique questions */
+function pickQuestions(){
+  const pool = [...questionBank];
+  const res = [];
+  while(res.length < TOTAL && pool.length){
+    const i = Math.floor(Math.random()*pool.length);
+    res.push(pool.splice(i,1)[0]);
+  }
+  return res;
+}
+
+/* start */
+startBtn.addEventListener('click', ()=>{
+  questions = pickQuestions();
+  idx = 0; answers = [];
+  document.getElementById('quizCard').style.height = 'auto';
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('qbox').style.display = 'block';
+  startBtn.style.display = 'none';
+  renderQuestion();
+});
+
+/* skip */
+skipBtn.addEventListener('click', ()=>{
+  if(!questions.length) return;
+  idx++;
+  answers.push({skipped:true});
+  if(idx >= TOTAL) showResult();
+  else renderQuestion();
+});
+
+/* render */
+function renderQuestion(){
+  const cur = questions[idx];
+  qtext.innerHTML = `<strong>${cur.q}</strong>`;
+  choicesEl.innerHTML = '';
+  cur.a.forEach((opt,i)=>{
+    const b = document.createElement('div');
+    b.className = 'choice';
+    b.innerText = opt;
+    b.onclick = ()=>{ selectOption(i); };
+    choicesEl.appendChild(b);
+  });
+  qcount.innerText = `Câu ${idx+1} / ${TOTAL}`;
+  bar.style.width = `${((idx)/TOTAL)*100}%`;
+}
+
+/* on select (we record but result will troll regardless) */
+function selectOption(i){
+  answers.push({q:questions[idx], choice:i});
+  // little animation
+  logo.classList.add('angry');
+  setTimeout(()=>logo.classList.remove('angry'),350);
+  // small sound & vib
+  try{ pop.currentTime=0; pop.play().catch(()=>{}); }catch(e){}
+  if(navigator.vibrate) navigator.vibrate(80);
+  // next
+  idx++;
+  if(idx >= TOTAL) showResult();
+  else renderQuestion();
+}
+
+/* show result: always lầy; choose a playful roast and percent (mostly high) */
+function showResult(){
+  document.getElementById('qbox').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'block';
+  bar.style.width = `100%`;
+
+  // compute a fake score but biased high; also inject slight variation
+  const base = 80 + Math.floor(Math.random()*21); // 80..100
+  // if user skipped many, slightly higher (troll)
+  const skipped = answers.filter(a=>a.skipped).length;
+  const score = Math.min(100, base + skipped*2);
+
+  const scoreText = document.getElementById('scoreText');
+  scoreText.innerText = `${score}% ÓC CHÓ`;
+  const roastText = document.getElementById('roastText');
+
+  // pick roast lines
+  const roasts = [
+    "Bạn xứng đáng cầm cờ đội Óc Chó chính hiệu 🏆🐶",
+    "Trời ơi, mức óc chó của bạn khiến ai cũng phải ngước nhìn 😅",
+    "Nhắm mắt lại và tưởng tượng bạn vừa chạm tới level 'óc chó pro' 💥",
+    "Bạn làm tổ chức Óc Chó rộn ràng hơn — chúc mừng nhé! 🎉",
+    "Ôi dào, bạn lầy tới mức nhà sản xuất phải thêm cảnh bonus 😂"
+  ];
+  const advice = [
+    "Lời khuyên: uống 1 cốc nước, thở 3 lần, rồi làm lại thử xem nhé.",
+    "Tip nhỏ: gửi quiz này cho crush để họ biết bạn dễ thương lầy tới đâu.",
+    "Mẹo sống sót: đừng tham gia challenge có bẫy nữa — trừ khi muốn lầy hơn.",
+    "Gợi ý: chụp ảnh điểm số này và khoe cho team để cùng cười."
+  ];
+  roastText.innerText = roasts[simpleHash(JSON.stringify(answers)) % roasts.length] + " — " + advice[simpleHash(String(score)) % advice.length];
+
+  // confetti & sound
+  doConfetti();
+  try{ pop.currentTime=0; pop.play().catch(()=>{}); }catch(e){}
+}
+
+/* confetti */
+function doConfetti(){
+  const ctx = confettiCanvas.getContext('2d');
+  const pieces = [];
+  for(let i=0;i<120;i++){
+    pieces.push({
+      x: Math.random()*confettiCanvas.width,
+      y: Math.random()*-confettiCanvas.height,
+      vx: Math.random()*2-1,
+      vy: Math.random()*3+2,
+      size: Math.random()*8+4,
+      color: ['#ff5d8f','#ffd166','#6ee7b7','#4cc9f0','#c77dff'][Math.floor(Math.random()*5)]
+    });
+  }
+  let t=0;
+  const iv = setInterval(()=>{
+    t++;
+    ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    pieces.forEach(p=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.size, p.size*0.6);
+    });
+    if(t>120){ clearInterval(iv); ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); }
+  },16);
+}
+
+/* buttons */
+document.getElementById('retryBtn').addEventListener('click', ()=>{
+  // reset UI
+  startBtn.style.display='inline-block';
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('qbox').style.display='block';
+  bar.style.width='0%';
+  qcount.innerText = `Câu 0 / ${TOTAL}`;
+});
+document.getElementById('shareBtn').addEventListener('click', ()=>{
+  // simple share: snapshot minimal card
+  const c = document.createElement('canvas'); c.width=800; c.height=600;
+  const g = c.getContext('2d');
+  g.fillStyle='#061226'; g.fillRect(0,0,c.width,c.height);
+  g.fillStyle='#fff'; g.font='bold 36px Arial'; g.fillText('Test Óc Chó', 28,60);
+  g.font='28px Arial'; g.fillText(document.getElementById('scoreText').innerText, 28,120);
+  g.font='20px Arial'; g.fillText(document.getElementById('roastText').innerText, 28,180);
+  const a = document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='occho.png'; a.click();
+});
+
+/* small helpers */
+function simpleHash(s){
+  s = (s||'').toString().toLowerCase().trim();
+  let h=0; for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/* accessibility: start on Enter */
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && startBtn.style.display !== 'none') startBtn.click();
+});
+
+/* init */
+qcount.innerText = `Câu 0 / ${TOTAL}`;
+bar.style.width = '0%';
+</script>
+</body>
+</html>
